@@ -62,7 +62,8 @@ export const INTERNATIONAL_TOPICS = [
   "China",
   "Defense Policy",
   "Terrorism",
-  "Border Issues"
+  "Border Issues",
+  "Bondi Beach Attack"
 ];
 
 export type EmotionType = 'Angry' | 'Neutral' | 'Funny';
@@ -79,6 +80,20 @@ export interface ProfileAnalysis {
   actorType: string; // e.g., "State Media", "Political Bot", "Influencer"
   narrativePattern: string; // Description of recurring themes/biases
   associatedRisks: string[]; // e.g., "Promotes Polarization", "Fake Videos"
+  credibilityScore: number; // 0-100 Score
+  verificationStatus: string; // "Verified", "Unverified", "Suspended", "Parody"
+  networkAffiliation?: string; // Known links to IT cells or organizations
+  historicalFlagging?: string[]; // Past incidents of spreading misinformation
+  contentFocus?: string[]; // Main topics of operation
+}
+
+export interface VisualAnalysis {
+  detectedObjects: string[]; // e.g. ["Police Car", "Logo", "Crowd"]
+  authorityMarkers: string[]; // e.g. ["Delhi Police Logo", "Verified Badge", "Breaking News Ticker"]
+  authenticityVerdict: string; // e.g. "Misused Official Logo", "Authentic Screenshot"
+  manipulationScore: number; // 0-100
+  formattingIssues: string[]; // e.g. ["Mismatched Fonts", "Bad Alignment", "Pixelated Logo"]
+  textErrors: string[]; // e.g. ["Spelling: 'Govenment'", "Grammar: 'Police is coming'"]
 }
 
 export interface OsintAnalysis {
@@ -86,7 +101,8 @@ export interface OsintAnalysis {
   sourcePath: string;
   intention: string;
   profile: string; // Kept for summary/backwards compatibility
-  profileAnalysis?: ProfileAnalysis; // Enhanced structured data
+  profileAnalysis?: ProfileAnalysis;
+  visualAnalysis?: VisualAnalysis; // New field for detailed image forensics
   sentimentScore: number; // -100 to 100
   propagandaTechniques: string[];
   botActivityProbability: number; // 0 to 100

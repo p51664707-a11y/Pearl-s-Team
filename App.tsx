@@ -134,7 +134,7 @@ export default function App() {
           setLoadingLogs(prev => [...prev, logs[currentLogIndex]]);
           currentLogIndex++;
         }
-      }, 800); // 800ms updates
+      }, 50); // 50ms updates for speed
 
       // Trigger "Long Wait" message after 8 seconds
       const timeout = setTimeout(() => {

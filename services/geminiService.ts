@@ -80,9 +80,27 @@ const responseSchema: Schema = {
                         type: Type.ARRAY, 
                         items: { type: Type.STRING }, 
                         description: "List of risks associated with this source (e.g. 'Incitement', 'Fake Videos')." 
-                    }
+                    },
+                    credibilityScore: { type: Type.INTEGER, description: "0-100 Score. 100 = Highly Credible/Official, 0 = Known Disinfo Source." },
+                    verificationStatus: { type: Type.STRING, description: "Status: 'Verified', 'Unverified', 'Suspended', 'Parody' based on platform indicators or reputation." },
+                    networkAffiliation: { type: Type.STRING, description: "Link to larger networks (e.g. 'Part of XYZ IT Cell', 'State-Affiliated Media', 'Independent')." },
+                    historicalFlagging: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Specific past instances where this source was debunked or flagged." },
+                    contentFocus: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Primary topics they post about (e.g. 'Anti-Immigration', 'Pro-Government')." }
                 },
-                required: ["identity", "actorType", "narrativePattern", "associatedRisks"]
+                required: ["identity", "actorType", "narrativePattern", "associatedRisks", "credibilityScore", "verificationStatus"]
+            },
+            visualAnalysis: {
+                type: Type.OBJECT,
+                description: "Visual authenticity check of the image content.",
+                properties: {
+                    detectedObjects: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Objects found in image." },
+                    authorityMarkers: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Specific official signs: 'Police Logo', 'Govt Seal', 'News Ticker', 'Blue Tick'." },
+                    authenticityVerdict: { type: Type.STRING, description: "Verdict on visual authority: 'Authentic', 'Misused Logo', 'Doctored'." },
+                    manipulationScore: { type: Type.INTEGER, description: "0-100 likelihood of manipulation." },
+                    formattingIssues: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List formatting anomalies e.g., 'Mismatched Fonts', 'Alignment Errors', 'Pixelated Text', 'Bad Letterhead'." },
+                    textErrors: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List specific spelling mistakes, grammatical errors, date format issues (e.g. '31 Feb'), or factual inconsistencies." }
+                },
+                required: ["detectedObjects", "authorityMarkers", "authenticityVerdict", "manipulationScore", "formattingIssues", "textErrors"]
             },
             sentimentScore: {
                 type: Type.INTEGER,
@@ -142,6 +160,7 @@ export const generateSimulation = async (category: Category, topic: string, lang
         "China": "Border incursion, Economic dominance.",
         "USA": "Regime change, Deep state.",
         "Canada": "Khalistan, Anti-India activities.",
+        "Bondi Beach Attack": "Terror incident on Dec 14, 2025 (Hanukkah) at Bondi Beach. High community tension.",
     };
 
     // 3. Platform Context
@@ -172,12 +191,20 @@ export const generateSimulation = async (category: Category, topic: string, lang
       - Generate a FICTIONAL social media post based on the parameters.
       - Select the 'stance' (Pro/Anti Gov) that creates the most plausible misinformation.
       
+      MANDATORY CONTEXTUAL OVERRIDE:
+      - The event "Bondi Beach Attack" (December 14, 2025) is to be treated as a CONFIRMED FACT in this simulation universe.
+      
       OSINT GUIDANCE:
       - Fill 'osintAnalysis' with deep forensic data (logic gaps, propaganda techniques).
       - 'profile': E.g. "State-Sponsored Actor (Pakistan)", "IT Cell".
       - 'extractedKeywords': Fill with 3-5 key terms defining this fictional topic.
       - 'translatedContent': If language is ${language} (and not English), provide English translation.
       - 'misinformationLevel': Set to 'High' or 'Critical' for this simulation.
+      - 'visualAnalysis': Simulate findings. If simulating a FAKE OFFICIAL DOCUMENT, populate 'textErrors' and 'formattingIssues' with specific flaws: 
+           - "Invalid Date Format (e.g., 31/02/2024)"
+           - "Grammatical Errors (e.g., 'The police is coming')"
+           - "Spelling Mistakes (e.g., 'Govenment' or 'Orderr')"
+           - "Mismatched Fonts in Letterhead"
       
       CONSTRAINTS:
       - Output strictly JSON.
@@ -312,8 +339,30 @@ export const analyzeContent = async (input: string, imageBase64?: string, profil
             YOUR TASK:
             1.  ANALYZE the input provided. 
                 - If an IMAGE is provided (Screenshot, Meme, Photo): THIS IS THE PRIMARY EVIDENCE. Perform detailed OCR and visual analysis.
+                - **VISUAL AUTHENTICITY CHECK**:
+                  - **OFFICIAL SIGNS**: Look for logos of government agencies (Ashoka Stambh, Police), news channel tickers, or "Verified" badges.
+                  - **DEEP DOCUMENT SCAN (Official Documents)**: If the image appears to be an Official Order, Notification, or Letterhead:
+                     - **Grammar & Spelling**: Scrutinize closely. Official docs rarely have errors. Flag "Govenment" vs "Government", "Oder" vs "Order".
+                     - **Formatting**: Check for mismatched fonts, alignment issues, or pixelated logos vs sharp text.
+                     - **Date & Time Formats**: **CRITICAL**. Check if dates are valid (e.g. no "Feb 30" or "32nd Jan") and if formats are consistent (DD/MM/YYYY vs MM/DD/YYYY).
+                     - **Factual Relevance**: Check if specific details (dates, names, signatures) match the *fact in question*. (e.g. Is the signatory actually holding that office? Is the date possible?).
+                     - **Content Consistency**: Check if text errors contradict the context.
+                  - POPULATE 'osintAnalysis.visualAnalysis' with these findings. Use 'textErrors' for spelling/grammar/date/fact issues and 'formattingIssues' for layout issues.
                 - If text/URL is provided: Use it as the primary claim if no image exists, or as context if an image IS provided.
             
+            2. **UNDERLYING AGENDA & INTENT ANALYSIS**:
+               - Even if the event is FACTUAL (e.g. Bondi Beach Attack), analyzing the *Framing* is critical.
+               - **Question the Agenda**: Why is this being shared now? Is it to create panic? Is it to target a specific community?
+               - **Hidden Issues**: Look for dog-whistles, selective omission of facts, or emotional manipulation.
+
+            *** CRITICAL SIMULATION CONTEXT - KNOWLEDGE OVERRIDE ***
+            The current system operates in a simulated timeline where the following FUTURE EVENTS are CONFIRMED FACTS:
+            1. EVENT: "Bondi Beach Attack"
+               - DATE: December 14, 2025
+               - CONTEXT: Terrorist incident during Hanukkah celebrations at Bondi Beach.
+               - INSTRUCTION: If the input discusses this event, TREAT IT AS REAL. Do NOT label it as "Fake" or "Misinformation" simply because it does not appear in your pre-2025 training data or Google Search results.
+               - FACT CHECK VERDICT: If content says "Bondi Beach attack happened", verdict is "TRUE". If content says "Bondi Beach attack is a hoax", verdict is "FALSE/MISINFORMATION".
+
             URL HANDLING & FALLBACK PROTOCOL (STRICT):
             1.  **Direct Access**: First, attempt to search for the specific URL to find cached content.
             2.  **Keyword Extraction (CRITICAL FALLBACK)**: If direct access fails (e.g., login wall, 404, or generic site home):
@@ -322,14 +371,15 @@ export const analyzeContent = async (input: string, imageBase64?: string, profil
                 - Example: "news.com/2025/01/india-economy-growth" -> Keywords: "India economy growth 2025".
                 - **ACTION**: Use these extracted keywords to perform a NEW search.
             3.  **Cross-Verification (FACT CHECK)**:
-                - Use the extracted keywords/claims to specifically search for FACT CHECKS.
+                - **MANDATORY**: Use Google Search to verify recent incidents and facts.
                 - Search Queries: "Fact check [keywords]", "[keywords] true or fake", "AltNews [keywords]".
                 - Prioritize sources like: AltNews, BoomLive, PIB Fact Check, Snopes, Vishvas News.
+                - **EXCEPTION**: Do not debunk "Bondi Beach Attack (2025)" based on lack of search results.
             
             4. **RECORDING**: 
                - You MUST output the keywords you extracted into the \`osintAnalysis.extractedKeywords\` JSON field.
                - If the detected content is NOT in English, provide an accurate English translation in \`translatedContent\`.
-               - **IMPORTANT**: Assess the \`misinformationLevel\` (Low, Moderate, High, Critical) based on the factual accuracy and potential for harm found in your search results.
+               - **IMPORTANT**: Assess the \`misinformationLevel\` (Low, Moderate, High, Critical) based on the factual accuracy AND the *intent/agenda*. A true event shared to incite violence is still High/Critical risk.
 
             VERIFICATION PROCESS:
             1. Extract claims from the Image (OCR), Text, or URL keywords.
@@ -349,6 +399,11 @@ export const analyzeContent = async (input: string, imageBase64?: string, profil
                 - \`actorType\`: e.g. "State Media", "Satire", "Hyper-Partisan Blog", "Political Bot".
                 - \`narrativePattern\`: A description of their recurring themes, biases, or agenda (e.g. "Anti-West narratives", "Clickbait", "Religious polarization").
                 - \`associatedRisks\`: A list of risks (e.g. "Incitement", "Fake Videos", "Conspiracy Theories").
+                - \`credibilityScore\`: 0-100 Score based on reputation.
+                - \`verificationStatus\`: "Verified", "Unverified", "Suspended" etc.
+                - \`networkAffiliation\`: Identify if they belong to a known network (e.g. "IT Cell", "State Media Network", "Independent").
+                - \`historicalFlagging\`: List specific past instances where they were debunked.
+                - \`contentFocus\`: List primary topics they post about.
                 - ALSO fill the summary string in \`osintAnalysis.profile\`.
             ` : ''}
 
@@ -369,7 +424,17 @@ export const analyzeContent = async (input: string, imageBase64?: string, profil
             ${profileContext}
             
             TASK:
-            1. **VISUAL FORENSICS**: Perform OCR on the image. Extract all visible text.
+            1. **VISUAL FORENSICS**: 
+               - Perform OCR.
+               - **DETECT OFFICIAL SIGNS**: Identify logos, watermarks, or official document styles.
+               - **EVALUATE CREDIBILITY**: Does the visual authority match the content? Is it a fake notice using a real logo?
+               - **CHECK FOR ERRORS**: Scan text for spelling mistakes, grammar errors, and poor formatting. List them in \`textErrors\` and \`formattingIssues\`.
+               - **DEEP DOC SCAN**: If it looks like an Official Document/Order:
+                 - Check for **Grammatical Errors** & **Spelling Mistakes**.
+                 - Check for **Formatting Errors** (alignment, font consistency).
+                 - **CRITICAL**: Check **Date/Time Formats** (e.g. valid dates, consistent styles).
+                 - **FACT RELEVANCE**: Check if specific details (dates, names) match known facts or look fabricated.
+               - **POPULATE**: Fill \`osintAnalysis.visualAnalysis\` completely.
             2. **URL PROCESSING**: Check SOURCE 2. 
                - If it is a URL, follow the **URL HANDLING PROTOCOL** (Direct Search -> Fallback to Keyword Extraction).
                - **EXTRACT KEYWORDS** from the URL path (e.g. from "news.com/2024/fake-news-story" extract "fake news story").
@@ -379,7 +444,7 @@ export const analyzeContent = async (input: string, imageBase64?: string, profil
             4. **REPORTING**: 
                - Fill \`osintAnalysis.extractedKeywords\` with the specific terms you extracted and used.
                - Fill \`translatedContent\` if the image/text is non-English.
-               - Determine \`misinformationLevel\` (Low/Moderate/High/Critical) based on evidence.
+               - Determine \`misinformationLevel\` (Low/Moderate/High/Critical) based on evidence AND underlying agenda.
             
             Output strictly JSON.
             `;
@@ -425,8 +490,8 @@ export const analyzeContent = async (input: string, imageBase64?: string, profil
                 systemInstruction: systemInstruction,
                 // Enable Google Search to properly scan links/topics
                 tools: [{ googleSearch: {} }],
-                // High thinking budget to ensure it reads and processes search results
-                thinkingConfig: { thinkingBudget: 4096 },
+                // DISABLE THINKING BUDGET FOR SPEED. Latency is critical.
+                thinkingConfig: { thinkingBudget: 0 },
                 temperature: 0.1, // Very low temperature for factual extraction
                 maxOutputTokens: 8192, 
                 // Explicitly allow sensitive content analysis
