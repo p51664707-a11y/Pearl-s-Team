@@ -85,15 +85,29 @@ export interface ProfileAnalysis {
   networkAffiliation?: string; // Known links to IT cells or organizations
   historicalFlagging?: string[]; // Past incidents of spreading misinformation
   contentFocus?: string[]; // Main topics of operation
+  role?: 'Original Creator' | 'Opportunistic Amplifier' | 'Strategic Distributor' | 'Passive Sharer'; // New: Role in dissemination
+  agendaAlignment?: string; // New: How shared content fits their specific narrative
 }
 
 export interface VisualAnalysis {
-  detectedObjects: string[]; // e.g. ["Police Car", "Logo", "Crowd"]
-  authorityMarkers: string[]; // e.g. ["Delhi Police Logo", "Verified Badge", "Breaking News Ticker"]
-  authenticityVerdict: string; // e.g. "Misused Official Logo", "Authentic Screenshot"
-  manipulationScore: number; // 0-100
-  formattingIssues: string[]; // e.g. ["Mismatched Fonts", "Bad Alignment", "Pixelated Logo"]
-  textErrors: string[]; // e.g. ["Spelling: 'Govenment'", "Grammar: 'Police is coming'"]
+  detectedObjects: string[]; 
+  authorityMarkers: string[]; 
+  authenticityVerdict: string; 
+  manipulationScore: number; 
+  formattingIssues: string[]; 
+  textErrors: string[];
+  // New Forensic Fields
+  isOfficialDocument: boolean;
+  templateMatch?: {
+    isMatch: boolean;
+    discrepancies: string[]; // e.g. "Wrong Emblem Aspect Ratio", "Header Mismatch"
+  };
+  dateAnalysis?: {
+    isValidFormat: boolean;
+    isSundayOrHoliday: boolean; // Orders rarely issued on holidays
+    visualAlterationSigns: string[]; // e.g. "Different Font", "Background Noise Discontinuity"
+    timelineConsistency: string; // "Date is before the event mentioned"
+  };
 }
 
 export interface OsintAnalysis {
@@ -122,6 +136,7 @@ export interface SimulationResult {
   imageUrl?: string; // Base64 data URI
   memeTopText?: string;
   memeBottomText?: string;
+  imagePrompt?: string; // Added imagePrompt property
   platform: Platform;
   category: Category;
   stance: Stance;

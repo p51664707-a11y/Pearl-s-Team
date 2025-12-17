@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, Image, Download, ExternalLink, BrainCircuit, ScanLine, Fingerprint, Crosshair, Network, ScanFace, Zap, Tag, Bot, Link2, Key, Loader2, Play, Terminal, AlertTriangle, Gauge, UserCheck, ShieldAlert, CheckCircle, Shield, ShieldCheck, AlertOctagon, CheckSquare, Type, AlignLeft, Globe, BadgeAlert, History, Target } from 'lucide-react';
+import { Search, Image, Download, ExternalLink, BrainCircuit, ScanLine, Fingerprint, Crosshair, Network, ScanFace, Zap, Tag, Bot, Link2, Key, Loader2, Play, Terminal, AlertTriangle, Gauge, UserCheck, ShieldAlert, CheckCircle, Shield, ShieldCheck, AlertOctagon, CheckSquare, Type, AlignLeft, Globe, BadgeAlert, History, Target, FileSearch, CalendarX, FileWarning, Share2 } from 'lucide-react';
 import { OsintAnalysis } from '../types';
 
 interface OsintToolkitProps {
@@ -29,40 +29,8 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
     : headline;
   const factCheckUrl = `https://toolbox.google.com/factcheck/explorer/search/${encodeURIComponent(searchTerms)}`;
 
-  // --- HELPER: Detect if content claims to be an Official Document ---
-  const checkOfficialDocSignifiers = () => {
-    if (!osintAnalysis) return false;
-    
-    // 1. Skip Memes/Satire (Logic: Memes rarely have official logos)
-    if (osintAnalysis.inferredFormat?.includes('Meme') || osintAnalysis.inferredFormat?.includes('Satire')) {
-        return false;
-    }
-
-    const combinedText = (headline + " " + (osintAnalysis.extractedKeywords?.join(" ") || "")).toLowerCase();
-    
-    // 2. Keywords that suggest the image SHOULD have a logo/seal/letterhead
-    const officialIndicators = [
-        'government', 'govt', 'ministry', 'department', 'police', 'court', 
-        'supreme', 'order', 'circular', 'notice', 'notification', 'gazette', 'official',
-        'press release', 'statement', 'commission', 'authority', 'bureau', 'letter', 'memo'
-    ];
-
-    // Check if text claims official authority
-    const textHit = officialIndicators.some(i => combinedText.includes(i));
-    
-    // Check if Visual Analysis detected a document-like object
-    const docObjects = ['document', 'paper', 'letter', 'page', 'text'];
-    const visualHit = osintAnalysis.visualAnalysis?.detectedObjects?.some(obj => 
-        docObjects.some(d => obj.toLowerCase().includes(d))
-    ) || false;
-
-    return textHit && visualHit;
-  };
-
-  const isOfficialDocContext = checkOfficialDocSignifiers();
-  const showMissingMarkerWarning = osintAnalysis?.visualAnalysis && 
-                                   osintAnalysis.visualAnalysis.authorityMarkers.length === 0 && 
-                                   isOfficialDocContext;
+  const isOfficialDoc = osintAnalysis?.visualAnalysis?.isOfficialDocument;
+  const showMissingMarkerWarning = isOfficialDoc && (!osintAnalysis?.visualAnalysis?.authorityMarkers || osintAnalysis.visualAnalysis.authorityMarkers.length === 0);
 
   const formatExifData = (tags: any, fileStats: any) => {
     let output = "📁 FILE METADATA\n";
@@ -344,8 +312,8 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
     return (
         <div className="flex flex-wrap items-center gap-2 mt-2">
             {parts.map((part, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                    <span className="bg-white/80 px-2 py-1 rounded text-xs font-mono font-semibold text-blue-900 border border-blue-200 shadow-sm">
+                <div key={idx} className="flex items-center gap-2 max-w-full">
+                    <span className="bg-white/80 px-2 py-1 rounded text-xs font-mono font-semibold text-blue-900 border border-blue-200 shadow-sm truncate max-w-[150px]">
                         {part}
                     </span>
                     {idx < parts.length - 1 && (
@@ -422,7 +390,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                 className="flex items-center gap-2 text-sm text-blue-600 hover:underline bg-white/80 p-2 rounded border border-green-100/50 truncate"
                              >
                                 <ExternalLink size={12} className="shrink-0 text-green-600" />
-                                <span className="truncate">{url}</span>
+                                <span className="truncate flex-1">{url}</span>
                              </a>
                         ))}
                     </div>
@@ -456,7 +424,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                        </h4>
                        <div className="flex flex-wrap gap-2">
                            {osintAnalysis.extractedKeywords.map((kw, i) => (
-                               <span key={i} className="px-3 py-1 bg-white border border-amber-200 text-amber-800 rounded text-sm font-mono shadow-sm">
+                               <span key={i} className="px-3 py-1 bg-white border border-amber-200 text-amber-800 rounded text-sm font-mono shadow-sm break-all">
                                    {kw}
                                </span>
                            ))}
@@ -475,8 +443,8 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                    <ul className="space-y-2">
                        {osintAnalysis.logicGaps.map((gap, i) => (
                            <li key={i} className="flex items-start gap-2 text-sm text-gray-800 bg-white/80 p-2.5 rounded border border-red-100/50">
-                               <div className="mt-0.5 min-w-[6px] h-1.5 rounded-full bg-red-500 shadow-sm"></div>
-                               <span className="leading-snug">{gap}</span>
+                               <div className="mt-0.5 min-w-[6px] h-1.5 rounded-full bg-red-500 shadow-sm shrink-0"></div>
+                               <span className="leading-snug break-words">{gap}</span>
                            </li>
                        ))}
                    </ul>
@@ -552,49 +520,74 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                        <div className="space-y-4">
                            {/* Header Info */}
                            <div className="flex items-start gap-4">
-                                <div className="bg-cyan-900/30 p-2.5 rounded-lg text-cyan-400 border border-cyan-500/30">
+                                <div className="bg-cyan-900/30 p-2.5 rounded-lg text-cyan-400 border border-cyan-500/30 shrink-0">
                                     <ScanLine size={24} />
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
-                                        <h5 className="text-lg font-bold text-white leading-tight mb-1">{osintAnalysis.profileAnalysis.identity}</h5>
-                                        <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-900 text-cyan-300 border border-cyan-700 font-bold uppercase tracking-wider">
+                                        <h5 className="text-lg font-bold text-white leading-tight mb-1 truncate">{osintAnalysis.profileAnalysis.identity}</h5>
+                                        <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-900 text-cyan-300 border border-cyan-700 font-bold uppercase tracking-wider shrink-0 ml-2">
                                             {osintAnalysis.profileAnalysis.actorType}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-gray-400 font-mono">ID: {btoa(osintAnalysis.profileAnalysis.identity).substring(0, 12)}...</p>
+                                    <p className="text-xs text-gray-400 font-mono truncate">ID: {btoa(osintAnalysis.profileAnalysis.identity).substring(0, 12)}...</p>
                                     
                                     {/* Credibility Score Indicator */}
                                     <div className="flex items-center gap-2 mt-2">
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase">Credibility</div>
-                                        <div className="h-2 w-24 bg-gray-700 rounded-full overflow-hidden">
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase shrink-0">Credibility</div>
+                                        <div className="h-2 w-24 bg-gray-700 rounded-full overflow-hidden shrink-0">
                                             <div 
                                                className={`h-full ${osintAnalysis.profileAnalysis.credibilityScore > 70 ? 'bg-green-500' : osintAnalysis.profileAnalysis.credibilityScore > 40 ? 'bg-yellow-500' : 'bg-red-500'}`} 
                                                style={{ width: `${osintAnalysis.profileAnalysis.credibilityScore}%` }}
                                             ></div>
                                         </div>
-                                        <span className="text-xs text-gray-300 font-mono">{osintAnalysis.profileAnalysis.credibilityScore}/100</span>
+                                        <span className="text-xs text-gray-300 font-mono shrink-0">{osintAnalysis.profileAnalysis.credibilityScore}/100</span>
                                         <span className="text-[10px] text-gray-500">|</span>
-                                        <span className={`text-[10px] font-bold ${osintAnalysis.profileAnalysis.verificationStatus === 'Verified' ? 'text-blue-400' : 'text-gray-400'}`}>
+                                        <span className={`text-[10px] font-bold truncate ${osintAnalysis.profileAnalysis.verificationStatus === 'Verified' ? 'text-blue-400' : 'text-gray-400'}`}>
                                             {osintAnalysis.profileAnalysis.verificationStatus}
                                         </span>
                                     </div>
 
                                     {/* NEW: Network Affiliation */}
                                     {osintAnalysis.profileAnalysis.networkAffiliation && (
-                                        <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-                                            <Network size={12} className="text-cyan-500" />
-                                            <span className="font-bold text-cyan-100">Network:</span>
-                                            <span>{osintAnalysis.profileAnalysis.networkAffiliation}</span>
+                                        <div className="mt-2 flex items-center gap-2 text-xs text-gray-400 truncate">
+                                            <Network size={12} className="text-cyan-500 shrink-0" />
+                                            <span className="font-bold text-cyan-100 shrink-0">Network:</span>
+                                            <span className="truncate">{osintAnalysis.profileAnalysis.networkAffiliation}</span>
                                         </div>
                                     )}
                                 </div>
                            </div>
 
+                           {/* NEW: Amplification & Agenda Analysis (The Specific Request) */}
+                           {(osintAnalysis.profileAnalysis.role || osintAnalysis.profileAnalysis.agendaAlignment) && (
+                                <div className="bg-gradient-to-r from-gray-800 to-gray-800/50 p-3 rounded border-l-4 border-l-purple-500 border-y border-r border-gray-700 mt-2">
+                                    <div className="text-[10px] text-purple-300 uppercase tracking-wider font-bold mb-2 flex items-center gap-2">
+                                        <Share2 size={12} /> Amplification Dynamics
+                                    </div>
+                                    <div className="space-y-2">
+                                        {osintAnalysis.profileAnalysis.role && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-gray-400 font-semibold">Detected Role:</span>
+                                                <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${osintAnalysis.profileAnalysis.role.includes('Original') ? 'bg-blue-900/50 text-blue-300 border border-blue-800' : 'bg-purple-900/50 text-purple-300 border border-purple-800'}`}>
+                                                    {osintAnalysis.profileAnalysis.role}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {osintAnalysis.profileAnalysis.agendaAlignment && (
+                                            <div className="text-sm text-gray-200 leading-snug bg-gray-900/50 p-2 rounded border border-gray-700/50">
+                                                <span className="text-xs text-purple-400 font-bold uppercase block mb-1">Agenda Alignment & Intent:</span>
+                                                {osintAnalysis.profileAnalysis.agendaAlignment}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                           )}
+
                            {/* Narrative Pattern */}
                            <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
                                 <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Narrative Pattern</div>
-                                <p className="text-sm text-gray-200 leading-relaxed">
+                                <p className="text-sm text-gray-200 leading-relaxed break-words">
                                     {osintAnalysis.profileAnalysis.narrativePattern}
                                 </p>
                            </div>
@@ -607,7 +600,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
                                         {osintAnalysis.profileAnalysis.contentFocus.map((focus, i) => (
-                                            <span key={i} className="text-[10px] px-2 py-0.5 bg-cyan-900/40 text-cyan-200 border border-cyan-800/50 rounded font-mono">
+                                            <span key={i} className="text-[10px] px-2 py-0.5 bg-cyan-900/40 text-cyan-200 border border-cyan-800/50 rounded font-mono break-all">
                                                 {focus}
                                             </span>
                                         ))}
@@ -623,7 +616,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 mt-2">
                                         {osintAnalysis.profileAnalysis.associatedRisks.map((risk, i) => (
-                                            <span key={i} className="text-[10px] px-2 py-1 bg-red-900/40 text-red-200 border border-red-800/50 rounded">
+                                            <span key={i} className="text-[10px] px-2 py-1 bg-red-900/40 text-red-200 border border-red-800/50 rounded break-all">
                                                 {risk}
                                             </span>
                                         ))}
@@ -637,8 +630,9 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                     {osintAnalysis.profileAnalysis.historicalFlagging && osintAnalysis.profileAnalysis.historicalFlagging.length > 0 ? (
                                         <ul className="space-y-1 mt-1">
                                             {osintAnalysis.profileAnalysis.historicalFlagging.map((flag, i) => (
-                                                <li key={i} className="text-[10px] text-gray-300 italic flex items-start gap-1">
-                                                    <span className="text-red-400 mt-0.5">•</span> {flag}
+                                                <li key={i} className="text-[10px] text-gray-300 italic flex items-start gap-1 break-words">
+                                                    <span className="text-red-400 mt-0.5 shrink-0">•</span> 
+                                                    <span>{flag}</span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -657,7 +651,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                            </div>
                            <div>
                                <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">Identity Signature</div>
-                               <div className="text-sm font-mono text-gray-100 leading-relaxed font-semibold">
+                               <div className="text-sm font-mono text-gray-100 leading-relaxed font-semibold break-words">
                                    {osintAnalysis.profile}
                                </div>
                            </div>
@@ -679,7 +673,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                         </div>
                         <div>
                             <div className="text-xs text-orange-400 uppercase tracking-wider mb-1">Target Objective</div>
-                            <p className="text-sm text-gray-900 font-medium leading-relaxed">
+                            <p className="text-sm text-gray-900 font-medium leading-relaxed break-words">
                                 {osintAnalysis.intention}
                             </p>
                         </div>
@@ -707,7 +701,82 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                       <p className="text-sm">No visual artifact associated with this intelligence.</p>
                   </div>
               ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
+                      
+                      {/* NEW: DEEP DOCUMENT AUDIT (If official context) */}
+                      {isOfficialDoc && (
+                          <div className="bg-white p-5 rounded-lg shadow-md border-t-4 border-t-red-600 border-x border-b border-gray-200 animate-fade-in">
+                               <div className="flex items-center gap-3 mb-4">
+                                   <div className="bg-red-100 p-2 rounded text-red-600">
+                                       <FileSearch size={24} />
+                                   </div>
+                                   <div>
+                                       <h4 className="font-bold text-gray-900 text-lg leading-none">Official Document Audit</h4>
+                                       <p className="text-xs text-gray-500 mt-1">Template matching & deep forensic analysis against known Govt standards.</p>
+                                   </div>
+                               </div>
+
+                               <div className="grid md:grid-cols-2 gap-6">
+                                   {/* Template Matching */}
+                                   <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                           <ScanLine size={12} /> Template Comparison
+                                       </div>
+                                       {osintAnalysis?.visualAnalysis?.templateMatch?.isMatch ? (
+                                           <div className="flex items-start gap-2 text-green-700 bg-green-50 p-2 rounded border border-green-200">
+                                               <CheckCircle size={16} className="mt-0.5 shrink-0" />
+                                               <span className="text-sm font-bold">Matches standard official format.</span>
+                                           </div>
+                                       ) : (
+                                           <div className="flex items-start gap-2 text-red-700 bg-red-50 p-2 rounded border border-red-200">
+                                               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                                               <span className="text-sm font-bold">Format Mismatch Detected</span>
+                                           </div>
+                                       )}
+                                       {osintAnalysis?.visualAnalysis?.templateMatch?.discrepancies?.length ? (
+                                           <ul className="mt-2 space-y-1">
+                                               {osintAnalysis.visualAnalysis.templateMatch.discrepancies.map((d, i) => (
+                                                   <li key={i} className="text-xs text-red-600 flex items-start gap-1 break-words">
+                                                       <span className="text-red-400 mt-0.5 shrink-0">•</span> 
+                                                       <span>{d}</span>
+                                                   </li>
+                                               ))}
+                                           </ul>
+                                       ) : null}
+                                   </div>
+
+                                   {/* Date Forensics */}
+                                   <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                           <CalendarX size={12} /> Date Integrity Check
+                                       </div>
+                                       
+                                       <div className="space-y-2">
+                                           {osintAnalysis?.visualAnalysis?.dateAnalysis?.isSundayOrHoliday && (
+                                               <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-100 p-1.5 rounded">
+                                                   <AlertOctagon size={12} />
+                                                   <span className="font-bold">Date is a Sunday/Holiday (Suspicious for Orders)</span>
+                                               </div>
+                                           )}
+                                           
+                                           {osintAnalysis?.visualAnalysis?.dateAnalysis?.visualAlterationSigns?.map((sign, i) => (
+                                               <div key={i} className="flex items-center gap-2 text-xs text-red-600 bg-red-50 p-1.5 rounded border border-red-100 break-words">
+                                                   <FileWarning size={12} className="shrink-0" />
+                                                   <span>{sign}</span>
+                                               </div>
+                                           ))}
+
+                                           {osintAnalysis?.visualAnalysis?.dateAnalysis?.timelineConsistency && (
+                                                <p className="text-xs text-gray-600 italic border-t border-gray-200 pt-1 mt-1 break-words">
+                                                    timeline: "{osintAnalysis.visualAnalysis.dateAnalysis.timelineConsistency}"
+                                                </p>
+                                           )}
+                                       </div>
+                                   </div>
+                               </div>
+                          </div>
+                      )}
+
                       {/* DISPLAY OFFICIAL SIGNS DETECTED BY GEMINI */}
                       {osintAnalysis?.visualAnalysis && (
                         <div className="bg-white p-4 rounded-lg shadow-sm border border-indigo-100 mb-4 animate-fade-in space-y-4">
@@ -744,16 +813,16 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                         {/* Logic: Only flag "Suspect" if NO markers found AND context signifies an official document/order */}
                                         {showMissingMarkerWarning ? (
                                             <>
-                                                <div className="text-sm font-bold px-3 py-1 rounded border bg-red-50 text-red-700 border-red-200 w-max">
+                                                <div className="text-sm font-bold px-3 py-1 rounded border bg-red-50 text-red-700 border-red-200 w-fit max-w-full break-words whitespace-normal">
                                                     Suspect / Unverified
                                                 </div>
-                                                <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-100 rounded text-xs text-red-800 leading-snug">
+                                                <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-100 rounded text-xs text-red-800 leading-snug break-words">
                                                     <BadgeAlert size={14} className="shrink-0 mt-0.5" />
                                                     <span><strong>Credibility Alert:</strong> Content implies official authority (Govt/Police/Order) but lacks detectable official logos.</span>
                                                 </div>
                                             </>
                                         ) : (
-                                            <div className={`text-sm font-bold px-3 py-1 rounded border w-max ${osintAnalysis.visualAnalysis.authenticityVerdict.toLowerCase().includes('authentic') ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                            <div className={`text-sm font-bold px-3 py-1 rounded border w-fit max-w-full break-words whitespace-normal ${osintAnalysis.visualAnalysis.authenticityVerdict.toLowerCase().includes('authentic') ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                                                 {osintAnalysis.visualAnalysis.authenticityVerdict}
                                             </div>
                                         )}
@@ -766,12 +835,12 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                 {/* Text Errors */}
                                 <div>
                                     <div className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
-                                        <Type size={10} /> Grammar, Spelling & Date Integrity
+                                        <Type size={10} /> Grammar & Spelling
                                     </div>
                                     {osintAnalysis.visualAnalysis.textErrors && osintAnalysis.visualAnalysis.textErrors.length > 0 ? (
                                         <ul className="space-y-1">
                                             {osintAnalysis.visualAnalysis.textErrors.map((err, i) => (
-                                                <li key={i} className="text-xs text-red-600 flex items-start gap-1.5 bg-red-50 p-1.5 rounded border border-red-100">
+                                                <li key={i} className="text-xs text-red-600 flex items-start gap-1.5 bg-red-50 p-1.5 rounded border border-red-100 break-words">
                                                     <AlertTriangle size={10} className="mt-0.5 shrink-0" />
                                                     <span>{err}</span>
                                                 </li>
@@ -780,7 +849,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                     ) : (
                                         <div className="text-xs text-green-600 flex items-center gap-1.5 bg-green-50 p-1.5 rounded border border-green-100">
                                             <CheckCircle size={10} />
-                                            <span>No obvious spelling/grammar/date errors.</span>
+                                            <span>No obvious spelling/grammar errors.</span>
                                         </div>
                                     )}
                                 </div>
@@ -793,7 +862,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                     {osintAnalysis.visualAnalysis.formattingIssues && osintAnalysis.visualAnalysis.formattingIssues.length > 0 ? (
                                         <ul className="space-y-1">
                                             {osintAnalysis.visualAnalysis.formattingIssues.map((issue, i) => (
-                                                <li key={i} className="text-xs text-orange-600 flex items-start gap-1.5 bg-orange-50 p-1.5 rounded border border-orange-100">
+                                                <li key={i} className="text-xs text-orange-600 flex items-start gap-1.5 bg-orange-50 p-1.5 rounded border border-orange-100 break-words">
                                                     <AlertTriangle size={10} className="mt-0.5 shrink-0" />
                                                     <span>{issue}</span>
                                                 </li>
@@ -830,7 +899,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                     <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                                         Neural Deepfake Detector
                                     </h4>
-                                    <div className={`p-3 border-l-4 text-xs font-mono rounded-r ${mode === 'simulation' ? 'bg-red-50 border-red-500 text-red-800' : 'bg-green-50 border-green-500 text-green-800'}`}>
+                                    <div className={`p-3 border-l-4 text-xs font-mono rounded-r ${mode === 'simulation' ? 'bg-red-50 border-red-500 text-red-800' : 'bg-green-50 border-green-500 text-green-800'} break-words overflow-x-auto`}>
                                         <div className="whitespace-pre-wrap">{visualData.deepfake}</div>
                                     </div>
                                 </div>
@@ -840,7 +909,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                                     <h4 className="font-bold text-xs text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                                         Metadata/EXIF Extractor
                                     </h4>
-                                    <div className="p-3 bg-gray-50 border-l-4 border-gray-500 text-xs text-gray-600 font-mono whitespace-pre-wrap rounded-r">
+                                    <div className="p-3 bg-gray-50 border-l-4 border-gray-500 text-xs text-gray-600 font-mono whitespace-pre-wrap rounded-r break-words overflow-x-auto">
                                         {visualData.metadata}
                                     </div>
                                 </div>
@@ -898,7 +967,7 @@ export const OsintToolkit: React.FC<OsintToolkitProps> = ({ headline, imageUrl, 
                              </div>
                              <span className="text-xs font-bold opacity-80">{sourceResult.confidence}% Confidence</span>
                         </div>
-                        <p className="text-sm opacity-90 leading-relaxed">
+                        <p className="text-sm opacity-90 leading-relaxed break-words">
                             {sourceResult.details}
                         </p>
                     </div>
