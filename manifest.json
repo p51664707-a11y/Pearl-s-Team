@@ -1,0 +1,20 @@
+
+{
+  "name": "Bharat Misinformation Monitor",
+  "short_name": "BMM",
+  "description": "Advanced strategic simulation and forensic analysis portal for the Indian information ecosystem.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F8F9FA",
+  "theme_color": "#FF9933",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/512/india.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "orientation": "portrait-primary",
+  "categories": ["security", "utilities", "education"]
+}

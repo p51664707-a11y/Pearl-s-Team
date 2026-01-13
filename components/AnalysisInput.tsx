@@ -1,10 +1,10 @@
 
+import { Search, Link as LinkIcon, FileText, ArrowLeft, Upload, Image as ImageIcon, X, AlertCircle, User, ScanLine, UserSearch, Target, Mic, Video, FileAudio } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Link as LinkIcon, FileText, ArrowLeft, Upload, Image as ImageIcon, X, AlertCircle, User, ScanLine } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface AnalysisInputProps {
-    onAnalyze: (input: string, image?: string, profileLink?: string) => void;
+    onAnalyze: (input: string, image?: string, profileLink?: string, media?: string, mediaMimeType?: string) => void;
     onBack: () => void;
 }
 
@@ -12,54 +12,59 @@ export const AnalysisInput: React.FC<AnalysisInputProps> = ({ onAnalyze, onBack 
     const [input, setInput] = useState('');
     const [profileLink, setProfileLink] = useState('');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedMedia, setSelectedMedia] = useState<{data: string, type: 'audio' | 'video', mime: string} | null>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const mediaInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const processFile = (file: File) => {
+    const processImage = (file: File) => {
         if (!file.type.startsWith('image/')) {
-            alert('Please upload an image file (PNG, JPG, WebP).');
+            alert('Please upload an image file.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => setSelectedImage(reader.result as string);
+        reader.readAsDataURL(file);
+    };
+
+    const processMedia = (file: File) => {
+        const type = file.type.startsWith('audio/') ? 'audio' : file.type.startsWith('video/') ? 'video' : null;
+        if (!type) {
+            alert('Please upload an audio or video file.');
             return;
         }
         const reader = new FileReader();
         reader.onloadend = () => {
-            setSelectedImage(reader.result as string);
+            setSelectedMedia({
+                data: reader.result as string,
+                type,
+                mime: file.type
+            });
         };
         reader.readAsDataURL(file);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) {
-            processFile(e.target.files[0]);
-        }
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        if (e.dataTransfer.files?.[0]) {
-            processFile(e.dataTransfer.files[0]);
-        }
-    };
-
     const handlePaste = (e: React.ClipboardEvent) => {
-        if (e.clipboardData.files?.[0]) {
+        const file = e.clipboardData.files?.[0];
+        if (file) {
             e.preventDefault();
-            processFile(e.clipboardData.files[0]);
+            if (file.type.startsWith('image/')) processImage(file);
+            else processMedia(file);
         }
     };
 
-    const clearImage = () => {
-        setSelectedImage(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+    const clearMedia = () => {
+        setSelectedMedia(null);
+        if (mediaInputRef.current) mediaInputRef.current.value = '';
     };
 
-    // Focus textarea on mount
     useEffect(() => {
         textareaRef.current?.focus();
     }, []);
 
-    const hasContent = input.trim().length > 0 || selectedImage !== null;
+    const hasContent = input.trim().length > 0 || selectedImage !== null || profileLink.trim().length > 0 || selectedMedia !== null;
 
     return (
         <div className="max-w-2xl mx-auto animate-fade-in space-y-8 mt-10">
@@ -67,128 +72,120 @@ export const AnalysisInput: React.FC<AnalysisInputProps> = ({ onAnalyze, onBack 
                  <button onClick={onBack} className="text-sm text-gray-500 hover:text-india-blue flex items-center gap-1 mx-auto mb-4 transition-colors">
                     <ArrowLeft size={16} /> Back to Home
                  </button>
-                 <span className="text-india-blue font-bold text-sm tracking-widest uppercase block">Analyzer Mode</span>
-                 <h2 className="text-4xl font-serif font-bold text-gray-900">Content Diagnostic</h2>
+                 <span className="text-india-blue font-bold text-sm tracking-widest uppercase block">Forensic Mode</span>
+                 <h2 className="text-4xl font-serif font-bold text-gray-900">Information Audit</h2>
                  <p className="text-gray-500 max-w-lg mx-auto">
-                    Analyze misinformation vectors. <br/>
-                    <span className="font-bold text-gray-700">Supported:</span> Text claims, URLs, or Screenshots (Paste/Upload).
+                    Audit text, profiles, images, or audio/video for deceptive markers.
                  </p>
             </div>
             
             <div 
                 className={`
-                    bg-white rounded-2xl shadow-xl border relative overflow-hidden group transition-all duration-300
+                    bg-white rounded-3xl shadow-2xl border relative overflow-hidden group transition-all duration-300
                     ${isDragging ? 'border-india-blue ring-4 ring-blue-50 scale-[1.02]' : 'border-gray-100'}
                 `}
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                        if (file.type.startsWith('image/')) processImage(file);
+                        else processMedia(file);
+                    }
+                }}
             >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-india-saffron via-white to-india-green"></div>
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-india-saffron via-india-blue to-india-green"></div>
                 
                 <div className="p-8">
-                    {/* Source Profile Input */}
-                    <div className="mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                         <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
-                                <ScanLine size={16} />
-                                <label>Profile Pattern Analyzer</label>
+                    {/* Actor Profile */}
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2 px-1">
+                            <div className="flex items-center gap-2 text-gray-800 font-black text-[10px] uppercase tracking-widest">
+                                <UserSearch size={14} className="text-india-blue" />
+                                <span>Social Actor Profile</span>
                             </div>
-                            <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded font-bold uppercase">Optional</span>
-                         </div>
-                         <p className="text-xs text-gray-500 mb-3">
-                            Paste the URL of the source profile (X, Facebook, Website) to analyze their <strong>Narrative Pattern</strong> and <strong>History of Misinformation</strong>.
-                         </p>
+                        </div>
                         <input
                             type="text"
-                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-india-blue focus:border-transparent bg-white text-gray-800 placeholder-gray-400 text-sm transition-all"
-                            placeholder="e.g. twitter.com/username or facebook.com/page-name"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-india-blue/5 focus:border-india-blue focus:bg-white text-gray-800 placeholder-gray-400 text-xs font-medium transition-all shadow-inner"
+                            placeholder="Paste Profile URL (X, Facebook, etc)..."
                             value={profileLink}
                             onChange={(e) => setProfileLink(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2 text-gray-700 font-bold text-sm">
-                            <FileText size={16} />
-                            <label>Input Evidence</label>
-                        </div>
-                        {selectedImage && (
-                            <span className="text-xs font-semibold text-green-600 flex items-center gap-1 bg-green-50 px-2 py-1 rounded">
-                                <ImageIcon size={12} /> Image Attached
-                            </span>
-                        )}
-                    </div>
-
-                    <textarea
-                        ref={textareaRef}
-                        className="w-full h-32 p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-india-blue focus:border-transparent resize-none bg-gray-50 text-gray-800 placeholder-gray-400 transition-all font-mono text-sm mb-4"
-                        placeholder="Paste text/URL here, or paste an image (Ctrl+V)..."
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onPaste={handlePaste}
-                    />
-
-                    {/* Image Preview Area */}
-                    {selectedImage ? (
-                        <div className="relative mb-6 group/image">
-                            <div className="h-40 w-full bg-gray-100 rounded-xl border border-gray-200 overflow-hidden flex items-center justify-center relative">
-                                <img src={selectedImage} alt="Preview" className="h-full w-full object-contain" />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center">
-                                    <button 
-                                        onClick={clearImage}
-                                        className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-red-600 transition-colors"
-                                    >
-                                        <X size={16} /> Remove Image
-                                    </button>
-                                </div>
+                    {/* Text Analysis */}
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-3 px-1">
+                            <div className="flex items-center gap-2 text-gray-800 font-black text-[10px] uppercase tracking-widest">
+                                <FileText size={14} className="text-india-saffron" />
+                                <span>Text Content</span>
                             </div>
                         </div>
-                    ) : (
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="h-px bg-gray-200 flex-1"></div>
-                            <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">OR</span>
-                            <div className="h-px bg-gray-200 flex-1"></div>
-                        </div>
-                    )}
+                        <textarea
+                            ref={textareaRef}
+                            className="w-full h-32 p-5 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-india-blue/5 focus:border-india-blue resize-none bg-gray-50 text-gray-800 placeholder-gray-400 transition-all font-sans text-sm shadow-inner"
+                            placeholder="Enter text or paste claim here..."
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onPaste={handlePaste}
+                        />
+                    </div>
 
-                    {/* Upload Controls */}
-                    {!selectedImage && (
-                        <div className="flex gap-4 mb-6">
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                className="hidden" 
-                                accept="image/*" 
-                                onChange={handleFileChange} 
-                            />
-                            <button 
-                                onClick={() => fileInputRef.current?.click()}
-                                className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-semibold hover:border-india-blue hover:text-india-blue hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-sm"
-                            >
-                                <Upload size={18} />
-                                Upload Screenshot / Image
-                            </button>
+                    {/* Artifact Previews */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        {/* Image Preview */}
+                        <div className="relative group/img h-32 bg-gray-50 rounded-2xl border border-dashed border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:bg-india-blue/5 transition-colors"
+                             onClick={() => !selectedImage && imageInputRef.current?.click()}>
+                            {selectedImage ? (
+                                <>
+                                    <img src={selectedImage} alt="Preview" className="w-full h-full object-cover" />
+                                    <button onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-lg"><X size={12}/></button>
+                                </>
+                            ) : (
+                                <div className="text-center flex flex-col items-center gap-1">
+                                    <ImageIcon size={20} className="text-gray-300" />
+                                    <span className="text-[8px] font-black text-gray-400 uppercase">Screenshot</span>
+                                </div>
+                            )}
+                            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && processImage(e.target.files[0])} />
                         </div>
-                    )}
+
+                        {/* Media Preview (Audio/Video) */}
+                        <div className="relative group/media h-32 bg-gray-50 rounded-2xl border border-dashed border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer hover:bg-india-blue/5 transition-colors"
+                             onClick={() => !selectedMedia && mediaInputRef.current?.click()}>
+                            {selectedMedia ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 p-2 text-white relative">
+                                    {selectedMedia.type === 'audio' ? <Mic size={24} className="text-india-saffron" /> : <Video size={24} className="text-india-saffron" />}
+                                    <span className="text-[8px] font-black uppercase mt-1 truncate max-w-full">{selectedMedia.type} Evidence</span>
+                                    <button onClick={(e) => { e.stopPropagation(); clearMedia(); }} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-lg"><X size={12}/></button>
+                                </div>
+                            ) : (
+                                <div className="text-center flex flex-col items-center gap-1">
+                                    <FileAudio size={20} className="text-gray-300" />
+                                    <span className="text-[8px] font-black text-gray-400 uppercase">Audio/Video</span>
+                                </div>
+                            )}
+                            <input type="file" ref={mediaInputRef} className="hidden" accept="audio/*,video/*" onChange={(e) => e.target.files?.[0] && processMedia(e.target.files[0])} />
+                        </div>
+                    </div>
                     
-                    <Tooltip content={!hasContent ? "Please enter text or upload an image." : "Start the OSINT analysis process."} className="w-full">
-                        <button
-                            onClick={() => hasContent && onAnalyze(input, selectedImage || undefined, profileLink || undefined)}
-                            disabled={!hasContent}
-                            className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold tracking-wider flex items-center justify-center gap-2 hover:bg-india-blue transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:-translate-y-1"
-                        >
-                            <Search size={20} />
-                            {selectedImage ? "SCAN IMAGE & TEXT" : "RUN DEEP SCAN"}
-                        </button>
-                    </Tooltip>
+                    <button
+                        onClick={() => hasContent && onAnalyze(input, selectedImage || undefined, profileLink || undefined, selectedMedia?.data, selectedMedia?.mime)}
+                        disabled={!hasContent}
+                        className={`
+                            w-full py-5 rounded-2xl font-black tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-xl hover:-translate-y-1 active:translate-y-0
+                            ${hasContent 
+                                ? 'bg-india-blue text-white hover:bg-blue-900 shadow-india-blue/20' 
+                                : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
+                        `}
+                    >
+                        <Search size={22} />
+                        RUN FORENSIC SCAN
+                    </button>
                 </div>
-            </div>
-
-            <div className="flex justify-center gap-8 text-xs text-gray-400 uppercase tracking-widest font-semibold">
-                <span className="flex items-center gap-1"><FileText size={12} /> Text Claims</span>
-                <span className="flex items-center gap-1"><LinkIcon size={12} /> URL Verification</span>
-                <span className="flex items-center gap-1"><ImageIcon size={12} /> Visual Forensics</span>
             </div>
         </div>
     );

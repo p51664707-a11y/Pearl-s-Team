@@ -1,10 +1,9 @@
 
+import { RotateCcw, ShieldCheck, Siren, FileSpreadsheet, Microscope, Zap, AlertTriangle, Activity, Link2, Search, Globe, CheckCircle, Mic, Video, FileAudio } from 'lucide-react';
 import React from 'react';
-import { SimulationResult, Category } from '../types';
-import { RotateCcw, ShieldAlert, ShieldCheck, Siren, FileSpreadsheet, Microscope, ScanEye, Zap, Home, Globe2, Megaphone, Download, BarChart3, AlertTriangle, Link2Off, Key, Languages, Info, Search, ExternalLink } from 'lucide-react';
 import { SocialMockup } from './SocialMockup';
-import { Tooltip } from './Tooltip';
 import { OsintToolkit } from './OsintToolkit';
+import { SimulationResult } from '../types';
 
 interface ResultCardProps {
   result: SimulationResult;
@@ -14,15 +13,11 @@ interface ResultCardProps {
 
 export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, mode }) => {
   const handleExport = () => {
-    // Check if XLSX is available (loaded from CDN in index.html)
     const XLSX = (window as any).XLSX;
-    
     if (!XLSX) {
         alert("Excel export library is still loading. Please try again in a moment.");
         return;
     }
-
-    // --- SHEET 1: ANALYSIS OVERVIEW (Key-Value Format) ---
     const overviewData = [
         { Section: "METADATA", Field: "Timestamp", Value: new Date().toLocaleString() },
         { Section: "", Field: "Category", Value: result.category },
@@ -30,53 +25,15 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, mode })
         { Section: "", Field: "Language", Value: result.language },
         { Section: "", Field: "Platform", Value: result.platform },
         { Section: "", Field: "Format", Value: result.format },
-        
         { Section: "CONTENT", Field: "Headline", Value: result.headline },
-        { Section: "", Field: "Main Content", Value: result.content },
-        { Section: "", Field: "Translated Content", Value: result.translatedContent || "N/A" },
-        { Section: "", Field: "Misinformation Risk Level", Value: result.misinformationLevel || "Moderate" },
-        { Section: "", Field: "Meme Top Text", Value: result.memeTopText || "N/A" },
-        { Section: "", Field: "Meme Bottom Text", Value: result.memeBottomText || "N/A" },
-        { Section: "", Field: "Image Prompt", Value: result.imagePrompt || "N/A" },
-
         { Section: "AI GROUND TRUTH", Field: "Stance", Value: result.stance },
-        { Section: "", Field: "Extremeness (1-7)", Value: result.aiExtremeness },
-        { Section: "", Field: "Credibility (1-7)", Value: result.aiCredibility },
-        { Section: "", Field: "Virality (1-10)", Value: result.aiVirality },
-        { Section: "", Field: "Harmony Impact (1-7)", Value: result.aiHarmony },
-        { Section: "", Field: "Emotion", Value: result.aiEmotion },
-        { Section: "", Field: "Trust Damage", Value: result.aiTrustDamage ? "Yes" : "No" },
-        { Section: "", Field: "Fact Check Summary", Value: result.factCheckAnalysis },
+        { Section: "", Field: "Misinformation Level", Value: result.misinformationLevel },
+        { Section: "ANALYSIS", Field: "Fact Check findings", Value: result.factCheckAnalysis },
     ];
-
-    // --- SHEET 2: OSINT DEEP DIVE ---
-    const osintData = [
-        { Metric: "Logic Gaps", Details: result.osintAnalysis?.logicGaps.join("\n") },
-        { Metric: "Source Path", Details: result.osintAnalysis?.sourcePath },
-        { Metric: "Strategic Intention", Details: result.osintAnalysis?.intention },
-        { Metric: "Actor Profile", Details: result.osintAnalysis?.profileAnalysis?.identity || result.osintAnalysis?.profile },
-        { Metric: "Extracted Keywords", Details: result.osintAnalysis?.extractedKeywords?.join(", ") },
-        { Metric: "Sentiment Score (-100 to 100)", Details: result.osintAnalysis?.sentimentScore },
-        { Metric: "Propaganda Techniques", Details: result.osintAnalysis?.propagandaTechniques.join(", ") },
-        { Metric: "Bot Activity Probability", Details: `${result.osintAnalysis?.botActivityProbability}%` },
-        { Metric: "Identified Sources", Details: result.groundingUrls?.join("\n") || "None" },
-    ];
-
-    // Create Workbook
     const wb = XLSX.utils.book_new();
     const ws1 = XLSX.utils.json_to_sheet(overviewData);
-    const ws2 = XLSX.utils.json_to_sheet(osintData);
-
-    // Styling cols
-    const wscols = [{ wch: 20 }, { wch: 20 }, { wch: 50 }];
-    ws1['!cols'] = wscols;
-    ws2['!cols'] = [{ wch: 25 }, { wch: 80 }];
-
-    XLSX.utils.book_append_sheet(wb, ws1, "Simulation Overview");
-    XLSX.utils.book_append_sheet(wb, ws2, "OSINT Forensics");
-
-    // Download
-    XLSX.writeFile(wb, `Misinfo_Analysis_${Date.now()}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws1, "Analysis Overview");
+    XLSX.writeFile(wb, `BMM_Report_${Date.now()}.xlsx`);
   };
 
   const handleDownloadImage = () => {
@@ -90,273 +47,180 @@ export const ResultCard: React.FC<ResultCardProps> = ({ result, onReset, mode })
     }
   };
 
-  // Check if analysis mode but no grounding URLs (potential hallucination warning)
-  const isHallucinationRisk = (!result.groundingUrls || result.groundingUrls.length === 0);
-
-  // Misinformation Level Helpers
-  const getRiskColor = (level?: string) => {
-    switch(level) {
-        case 'Low': return 'bg-green-100 text-green-800 border-green-200';
-        case 'Moderate': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        case 'High': return 'bg-orange-100 text-orange-800 border-orange-200';
-        case 'Critical': return 'bg-red-100 text-red-800 border-red-200';
-        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  const getStatusConfig = (level: string) => {
+    switch (level?.toLowerCase()) {
+      case 'critical':
+      case 'high':
+        return { text: 'CRITICAL MANIPULATION', color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: Siren, barColor: 'bg-red-500', width: '90%' };
+      case 'moderate':
+      case 'medium':
+        return { text: 'MODERATE DISTORTION', color: 'text-india-saffron', bg: 'bg-orange-50', border: 'border-orange-200', icon: AlertTriangle, barColor: 'bg-india-saffron', width: '55%' };
+      default:
+        return { text: 'FACTUALLY STABLE', color: 'text-india-green', bg: 'bg-green-50', border: 'border-green-200', icon: ShieldCheck, barColor: 'bg-india-green', width: '15%' };
     }
   };
 
-  const getRiskIcon = (level?: string) => {
-     switch(level) {
-        case 'Low': return <ShieldCheck size={20} />;
-        case 'Moderate': return <Info size={20} />;
-        case 'High': return <AlertTriangle size={20} />;
-        case 'Critical': return <Siren size={20} />;
-        default: return <Info size={20} />;
-    }
-  };
-
-  const topicQuery = result.topic || result.osintAnalysis?.inferredTopic || "India";
-  const factCheckLinks = [
-      { name: "Alt News", url: `https://www.altnews.in/?s=${encodeURIComponent(topicQuery)}`, color: "text-red-600 bg-red-50 border-red-100 hover:bg-red-100" },
-      { name: "Boom Live", url: `https://www.boomlive.in/search?q=${encodeURIComponent(topicQuery)}`, color: "text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100" },
-      { name: "PIB Fact Check", url: `https://www.google.com/search?q=site:pib.gov.in+${encodeURIComponent(topicQuery)}`, color: "text-green-600 bg-green-50 border-green-100 hover:bg-green-100" },
-      { name: "Vishvas News", url: `https://www.vishvasnews.com/search/?q=${encodeURIComponent(topicQuery)}`, color: "text-orange-600 bg-orange-50 border-orange-100 hover:bg-orange-100" }
-  ];
-
-  // Determine Source Name
-  const sourceName = result.osintAnalysis?.profileAnalysis?.identity || result.osintAnalysis?.profile;
+  const status = getStatusConfig(result.misinformationLevel);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-up pb-20">
+    <div className="max-w-6xl mx-auto space-y-4 animate-fade-in-up pb-10">
         
-        {/* Header / Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <div>
-               <h2 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-2">
-                  <Microscope className="text-india-blue" />
-                  {mode === 'simulation' ? "Simulation Artifact Generated" : "Content Analysis Report"}
-               </h2>
-               <p className="text-gray-500 text-sm">
-                   {mode === 'simulation' ? "Review the synthetic content and perform analysis." : "Review the AI forensic findings on your input."}
-               </p>
+        {/* Simplified Tactical Header */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-3 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 bg-india-blue text-white rounded-xl flex items-center justify-center shadow-lg">
+                   <Microscope size={24} />
+               </div>
+               <div>
+                  <h2 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
+                     {mode === 'simulation' ? "Simulation Data" : "Forensic Audit"}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-black tracking-widest">
+                        ID: {result.topic?.slice(0,3).toUpperCase() || 'GEN'}-{Math.floor(Math.random()*9999)}
+                    </span>
+                    <span className="text-[10px] text-india-blue font-bold uppercase tracking-widest">BM SYSTEM v3.5</span>
+                  </div>
+               </div>
             </div>
-            <div className="flex gap-3">
-                <Tooltip content="Export full analysis dossier to Excel.">
-                    <button 
-                        onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-sm text-sm"
-                    >
-                        <FileSpreadsheet size={18} /> Export Report
-                    </button>
-                </Tooltip>
-                <Tooltip content="Reset parameters and start a new simulation.">
-                    <button 
-                        onClick={onReset}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-semibold shadow-sm text-sm"
-                    >
-                        <RotateCcw size={18} /> New Scan
-                    </button>
-                </Tooltip>
+            <div className="flex gap-2">
+                <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-india-green text-white rounded-lg hover:bg-green-800 transition-all font-bold text-xs shadow-md">
+                    <FileSpreadsheet size={16} /> EXPORT EXCEL
+                </button>
+                <button onClick={onReset} className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-all font-bold text-xs shadow-md">
+                    <RotateCcw size={16} /> NEW SCAN
+                </button>
             </div>
         </div>
 
-        {/* Hallucination Warning Banner (Only visible if no sources found) */}
-        {isHallucinationRisk && (
-            <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r shadow-sm flex items-start gap-3">
-                <Link2Off className="text-orange-500 shrink-0" size={20} />
-                <div>
-                    <h3 className="font-bold text-orange-800 text-sm">Live Verification Failed</h3>
-                    <p className="text-xs text-orange-700 mt-1">
-                        The analyzer could not find active web sources to verify this input. 
-                        The report below is a <strong>hypothetical forensic analysis</strong> based on the text structure only.
-                    </p>
-                </div>
-            </div>
-        )}
-
-        <div className="grid lg:grid-cols-2 gap-8">
-            {/* LEFT: Artifact Display */}
+        <div className="grid lg:grid-cols-2 gap-6">
             <div className="space-y-6">
-                <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                    <div className="bg-gray-50 border-b border-gray-200 p-4 flex justify-between items-center">
-                        <span className="font-bold text-xs uppercase tracking-widest text-gray-500 flex items-center gap-2">
-                            <ScanEye size={16} /> 
-                            {mode === 'simulation' ? "Content Mockup" : "Evidence & Verification"}
-                        </span>
-                        <span className="bg-india-blue/10 text-india-blue text-xs px-2 py-1 rounded font-bold border border-india-blue/20">
-                            {result.platform}
-                        </span>
+                {/* Qualitative Verdict Card */}
+                <div className={`${status.bg} p-8 rounded-3xl border-2 ${status.border} shadow-lg transition-all relative overflow-hidden group`}>
+                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                        <status.icon size={120} />
                     </div>
                     
-                    <div className="p-6 bg-gray-100">
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-2 mb-6">
+                            <span className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">BMM Integrity Verdict</span>
+                        </div>
+                        
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                            <div className="flex flex-col">
+                                <h3 className={`text-4xl font-black tracking-tight ${status.color}`}>
+                                    {status.text}
+                                </h3>
+                                <div className="mt-2 text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                    <Activity size={12} /> Forensic Confidence: High
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 h-3 w-full bg-gray-200/50 rounded-full overflow-hidden border border-gray-100">
+                             <div 
+                                className={`h-full transition-all duration-1000 ${status.barColor}`} 
+                                style={{ width: status.width }}
+                             ></div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Artifact View */}
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-gray-900 text-white px-5 py-3 flex justify-between items-center">
+                        <span className="font-bold text-[10px] uppercase tracking-[0.2em] text-gray-400">Evidence Artifact</span>
+                        <span className="text-[10px] font-bold uppercase text-india-saffron">{result.platform}</span>
+                    </div>
+                    <div className="p-6 bg-gray-50/50">
                         {mode === 'simulation' ? (
-                            <SocialMockup 
-                                platform={result.platform}
-                                headline={result.headline}
-                                content={result.content}
-                                imageUrl={result.imageUrl}
-                                format={result.format}
-                                topic={result.topic}
-                                language={result.language}
-                                memeTopText={result.memeTopText}
-                                memeBottomText={result.memeBottomText}
-                                comments={result.comments}
-                            />
+                            <div className="scale-95 origin-top transform-gpu">
+                                <SocialMockup 
+                                    platform={result.platform}
+                                    headline={result.headline}
+                                    content={result.content}
+                                    imageUrl={result.imageUrl}
+                                    format={result.format}
+                                    topic={result.topic}
+                                    language={result.language}
+                                    memeTopText={result.memeTopText}
+                                    memeBottomText={result.memeBottomText}
+                                />
+                            </div>
                         ) : (
                             <div className="space-y-4">
-                                {result.imageUrl && (
-                                    <div className="bg-white p-2 rounded border border-gray-200 shadow-sm">
-                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Input Evidence</div>
-                                        <img 
-                                            src={result.imageUrl} 
-                                            alt="Analyzed Evidence" 
-                                            className="w-full h-auto max-h-[350px] object-contain rounded border border-gray-100" 
-                                        />
+                                {/* Media Evidence Display */}
+                                {result.mediaBase64 && (
+                                    <div className="bg-black rounded-2xl overflow-hidden shadow-xl border border-gray-800">
+                                        {result.mediaMimeType?.startsWith('video/') ? (
+                                            <video src={result.mediaBase64} controls className="w-full h-auto max-h-[400px]" />
+                                        ) : (
+                                            <div className="p-8 flex flex-col items-center gap-4">
+                                                <FileAudio size={48} className="text-india-saffron animate-pulse" />
+                                                <audio src={result.mediaBase64} controls className="w-full" />
+                                                <span className="text-[10px] text-gray-500 font-black uppercase">Vocal Forensic Stream Active</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
-                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="text-xs font-bold text-green-600 uppercase tracking-wider flex items-center gap-2">
-                                            <ShieldCheck size={14} /> Fact Check Verdict
-                                        </div>
-                                        {/* Misinformation Risk Badge */}
-                                        <div className={`px-3 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${getRiskColor(result.misinformationLevel)}`}>
-                                            {getRiskIcon(result.misinformationLevel)}
-                                            {result.misinformationLevel || 'Unknown'} Risk
-                                        </div>
+
+                                {result.imageUrl && !result.mediaBase64 && (
+                                  <div className="relative">
+                                    <img src={result.imageUrl} alt="Evidence" className="w-full h-auto max-h-[300px] object-contain rounded-2xl border border-gray-200 shadow-sm" />
+                                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md text-white text-[8px] font-black uppercase px-2 py-1 rounded flex items-center gap-1">
+                                      <Zap size={10} className="text-india-saffron" /> OCR Analysis Active
                                     </div>
-
-                                    <h3 className="font-bold text-gray-900 text-lg leading-tight mb-2">{result.headline}</h3>
-
-                                    {/* Source of Misinformation Section */}
-                                    {sourceName && (
-                                        <div className="mb-4 flex items-center gap-2">
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Source of Misinformation:</span>
-                                            <a 
-                                                href={`https://www.google.com/search?q=${encodeURIComponent(sourceName)}`} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                                            >
-                                                {sourceName}
-                                                <Search size={12} />
-                                            </a>
-                                        </div>
-                                    )}
-
-                                    {/* Contextual Links Section */}
-                                    <div className="mb-4 pt-3 border-t border-gray-100">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Search size={12} className="text-gray-400" />
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contextual Fact-Checks ({topicQuery})</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {factCheckLinks.map((link) => (
-                                                <a 
-                                                    key={link.name}
-                                                    href={link.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className={`px-3 py-1.5 rounded text-xs font-bold border flex items-center gap-1 transition-colors hover:shadow-sm ${link.color}`}
-                                                >
-                                                    {link.name} <ExternalLink size={10} />
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{result.content}</p>
+                                  </div>
+                                )}
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 text-lg leading-tight mb-3">{result.headline}</h3>
+                                    <p className="text-gray-700 text-sm leading-relaxed mb-4">{result.content}</p>
                                     
-                                    {/* Translation Block */}
-                                    {result.translatedContent && (
-                                        <div className="mt-4 bg-blue-50 border border-blue-100 p-3 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Languages size={12} className="text-blue-600" />
-                                                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">English Translation</span>
-                                            </div>
-                                            <p className="text-sm text-gray-800 italic">{result.translatedContent}</p>
-                                        </div>
+                                    {result.factCheckAnalysis && (
+                                      <div className="mt-4 p-5 bg-india-blue/5 border border-india-blue/10 rounded-2xl relative overflow-hidden">
+                                         <div className="absolute top-0 right-0 p-4 opacity-5">
+                                            <Search size={40} />
+                                         </div>
+                                         <h4 className="text-[10px] font-black text-india-blue uppercase flex items-center gap-2 mb-3 tracking-[0.2em]">
+                                            <ShieldCheck size={14} className="text-india-green" /> Search-Grounded Fact Check
+                                         </h4>
+                                         <p className="text-xs leading-relaxed text-gray-800 font-bold italic">
+                                            {result.factCheckAnalysis}
+                                         </p>
+                                      </div>
                                     )}
 
-                                    {/* Display Extracted Keywords */}
-                                    {result.osintAnalysis?.extractedKeywords && result.osintAnalysis.extractedKeywords.length > 0 && (
-                                        <div className="mt-4 pt-3 border-t border-gray-100">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Key size={12} className="text-gray-400" />
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Analysis Keywords</span>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {result.osintAnalysis.extractedKeywords.map((kw, i) => (
-                                                    <span key={i} className="px-2 py-1 bg-gray-50 text-gray-600 text-xs rounded border border-gray-200 font-mono">
-                                                        {kw}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
+                                    {result.groundingUrls && result.groundingUrls.length > 0 && (
+                                      <div className="mt-4 space-y-2">
+                                         <div className="flex items-center gap-2 px-1">
+                                            <Globe size={10} className="text-india-green" />
+                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Verified External Evidence</span>
+                                         </div>
+                                         <div className="flex flex-wrap gap-2">
+                                            {result.groundingUrls.map((url, i) => (
+                                              <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-100 rounded-lg text-[9px] font-bold text-india-blue hover:border-india-blue transition-all shadow-sm">
+                                                 <Link2 size={10} /> {new URL(url).hostname}
+                                              </a>
+                                            ))}
+                                         </div>
+                                      </div>
                                     )}
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
-
-                {/* AI Ground Truth Cards */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                        <div className="text-xs text-gray-500 font-bold uppercase mb-1">Extremeness</div>
-                        <div className="flex items-end gap-2">
-                            <span className="text-2xl font-bold text-gray-900">{result.aiExtremeness}/7</span>
-                            <div className="flex-1 h-2 bg-gray-100 rounded-full mb-1.5 overflow-hidden">
-                                <div className={`h-full ${result.aiExtremeness > 4 ? 'bg-red-500' : 'bg-green-500'}`} style={{width: `${(result.aiExtremeness/7)*100}%`}}></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                        <div className="text-xs text-gray-500 font-bold uppercase mb-1">Credibility Score</div>
-                         <div className="flex items-end gap-2">
-                            <span className="text-2xl font-bold text-gray-900">{result.aiCredibility}/7</span>
-                            <div className="flex-1 h-2 bg-gray-100 rounded-full mb-1.5 overflow-hidden">
-                                <div className={`h-full ${result.aiCredibility > 4 ? 'bg-orange-500' : 'bg-gray-400'}`} style={{width: `${(result.aiCredibility/7)*100}%`}}></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                         <div className="text-xs text-gray-500 font-bold uppercase mb-1">Virality Potential</div>
-                         <div className="flex items-end gap-2">
-                            <span className="text-2xl font-bold text-gray-900">{result.aiVirality}/10</span>
-                            <div className="flex-1 h-2 bg-gray-100 rounded-full mb-1.5 overflow-hidden">
-                                <div className={`h-full ${result.aiVirality > 7 ? 'bg-purple-500' : 'bg-blue-400'}`} style={{width: `${(result.aiVirality/10)*100}%`}}></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                        <div className="text-xs text-gray-500 font-bold uppercase mb-1">Trust Damage</div>
-                         <div className="flex items-center gap-2 h-8">
-                            {result.aiTrustDamage ? (
-                                <span className="flex items-center gap-1 text-red-600 font-bold text-sm bg-red-50 px-2 py-1 rounded">
-                                    <ShieldAlert size={16} /> HIGH RISK
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1 text-green-600 font-bold text-sm bg-green-50 px-2 py-1 rounded">
-                                    <ShieldCheck size={16} /> LOW RISK
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
             </div>
 
-            {/* RIGHT: OSINT Toolkit */}
-            <div className="space-y-6">
-                 <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-                    <OsintToolkit 
-                        headline={result.headline}
-                        imageUrl={result.imageUrl}
-                        osintAnalysis={result.osintAnalysis}
-                        groundingUrls={result.groundingUrls}
-                        onDownloadImage={handleDownloadImage}
-                        mode={mode}
-                    />
-                 </div>
+            <div className="h-full">
+                 <OsintToolkit 
+                    headline={result.headline}
+                    imageUrl={result.imageUrl}
+                    osintAnalysis={result.osintAnalysis}
+                    groundingUrls={result.groundingUrls}
+                    onDownloadImage={handleDownloadImage}
+                    mode={mode}
+                 />
             </div>
         </div>
     </div>

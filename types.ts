@@ -25,13 +25,13 @@ export const LANGUAGES = [
   { name: 'Hindi', native: 'हिन्दी' },
   { name: 'Bengali', native: 'বাংলা' },
   { name: 'Telugu', native: 'తెలుగు' },
-  { name: 'Marathi', native: 'मराठी' },
+  { name: 'Marathi', native: 'মরাঠি' },
   { name: 'Tamil', native: 'தமிழ்' },
-  { name: 'Urdu', native: 'اردو' },
+  { name: 'Urdu', native: 'اردו' },
   { name: 'Gujarati', native: 'ગુજરાતી' },
   { name: 'Kannada', native: 'ಕನ್ನಡ' },
   { name: 'Malayalam', native: 'മലയാളം' },
-  { name: 'Punjabi', native: 'ਪੰਜਾਬੀ' }
+  { name: 'Punjabi', native: 'ਪੰਜਾਬী' }
 ];
 
 export const DOMESTIC_TOPICS = [
@@ -75,68 +75,107 @@ export interface Comment {
   likes: string;
 }
 
+export type PropagandaTacticName = 
+  | 'Whataboutism' 
+  | 'Gaslighting' 
+  | 'Straw Man' 
+  | 'Appeal to Authority' 
+  | 'Bandwagon' 
+  | 'Ad Populum'
+  | 'Fear Mongering'
+  | 'Loaded Language'
+  | 'False Causality' | 'Character Assassination' | 'Red Herring' | 'Cherry Picking' | 'Glittering Generalities' | 'Narrative Hijacking' | 'Coordinated Spamming';
+
+export interface PropagandaTechnique {
+  name: PropagandaTacticName | string;
+  description: string;
+  severity: 'Low' | 'Medium' | 'High';
+}
+
 export interface ProfileAnalysis {
   identity: string;
-  actorType: string; // e.g., "State Media", "Political Bot", "Influencer"
-  narrativePattern: string; // Description of recurring themes/biases
-  associatedRisks: string[]; // e.g., "Promotes Polarization", "Fake Videos"
-  credibilityScore: number; // 0-100 Score
-  verificationStatus: string; // "Verified", "Unverified", "Suspended", "Parody"
-  networkAffiliation?: string; // Known links to IT cells or organizations
-  historicalFlagging?: string[]; // Past incidents of spreading misinformation
-  contentFocus?: string[]; // Main topics of operation
-  role?: 'Original Creator' | 'Opportunistic Amplifier' | 'Strategic Distributor' | 'Passive Sharer'; // New: Role in dissemination
-  agendaAlignment?: string; // New: How shared content fits their specific narrative
+  actorType: string; 
+  narrativePattern: string; 
+  associatedRisks: string[]; 
+  verificationStatus: string; 
+  networkAffiliation?: string; 
+  historicalFlagging?: string[]; 
+  contentFocus?: string[]; 
+  role?: 'Original Creator' | 'Opportunistic Amplifier' | 'Strategic Distributor' | 'Passive Sharer'; 
+  agendaAlignment?: string;
+  digitalFootprint?: {
+    accountAge?: string;
+    postingFrequency?: 'Low' | 'Medium' | 'High' | 'Extreme';
+    engagementAnomalies?: string[];
+  };
+  inferredAllegiance?: string;
+}
+
+export interface DeepfakeAnalysis {
+  isDeepfakeSuspected: boolean;
+  confidenceScore: string;
+  vocalAnomalies: string[];
+  visualAnomalies: string[];
+  referenceComparison?: string;
+  technicalReasoning: string;
 }
 
 export interface VisualAnalysis {
   detectedObjects: string[]; 
   authorityMarkers: string[]; 
   authenticityVerdict: string; 
-  manipulationScore: number; 
   formattingIssues: string[]; 
   textErrors: string[];
-  // New Forensic Fields
   isOfficialDocument: boolean;
-  templateMatch?: {
-    isMatch: boolean;
-    discrepancies: string[]; // e.g. "Wrong Emblem Aspect Ratio", "Header Mismatch"
+  dominantColors: string[];
+  textOverlayAnalysis?: {
+    fontStyle: string;
+    size: string;
+    color: string;
   };
-  dateAnalysis?: {
-    isValidFormat: boolean;
-    isSundayOrHoliday: boolean; // Orders rarely issued on holidays
-    visualAlterationSigns: string[]; // e.g. "Different Font", "Background Noise Discontinuity"
-    timelineConsistency: string; // "Date is before the event mentioned"
-  };
+  deepfakeDiagnostic?: DeepfakeAnalysis;
 }
 
 export interface OsintAnalysis {
   logicGaps: string[];
   sourcePath: string;
   intention: string;
-  profile: string; // Kept for summary/backwards compatibility
+  forensicReasoning: string; 
+  tacticalMarkers: string[]; 
+  profile: string; 
   profileAnalysis?: ProfileAnalysis;
-  visualAnalysis?: VisualAnalysis; // New field for detailed image forensics
-  sentimentScore: number; // -100 to 100
+  visualAnalysis?: VisualAnalysis; 
   propagandaTechniques: string[];
-  botActivityProbability: number; // 0 to 100
-  extractedKeywords?: string[]; // New field for URL/Text keywords
+  propagandaTactics?: PropagandaTechnique[];
+  extractedKeywords?: string[]; 
   inferredCategory?: Category;
   inferredTopic?: string;
   inferredPlatform?: Platform;
   inferredLanguage?: string;
   inferredFormat?: ContentFormat;
+  narrativeCluster?: {
+    clusterName: string;
+    isCoordinated: boolean;
+    associatedHashtags: string[];
+    primaryGeographicOrigin: string;
+  };
+  temporalContext?: {
+    isSensitiveWindow: boolean;
+    windowReason?: string;
+  };
 }
 
 export interface SimulationResult {
   headline: string;
   content: string;
-  translatedContent?: string; // New field for English translation
-  misinformationLevel?: 'Low' | 'Moderate' | 'High' | 'Critical'; // New field for Risk Level
-  imageUrl?: string; // Base64 data URI
+  translatedContent?: string; 
+  misinformationLevel: 'Low' | 'Moderate' | 'High' | 'Critical'; 
+  imageUrl?: string; 
+  mediaBase64?: string;
+  mediaMimeType?: string;
   memeTopText?: string;
   memeBottomText?: string;
-  imagePrompt?: string; // Added imagePrompt property
+  imagePrompt?: string; 
   platform: Platform;
   category: Category;
   stance: Stance;
@@ -144,23 +183,14 @@ export interface SimulationResult {
   topic?: string;
   language?: string;
   comments?: Comment[];
-  // AI Ground Truth Analysis
-  aiExtremeness: number; // 1-7
-  aiCredibility: number; // 1-7
-  aiVirality: number; // 1-10
-  aiHarmony: number; // 1-7 (Context dependent: Social Disruption or Diplomatic Harm)
   aiEmotion: EmotionType;
   aiTrustDamage: boolean;
   factCheckAnalysis: string;
   osintAnalysis?: OsintAnalysis;
-  groundingUrls?: string[]; // Links found during analysis
+  groundingUrls?: string[]; 
 }
 
 export interface UserEvaluation {
-  extremeness: number;
-  credibility: number;
-  virality: number;
-  harmony: number;
   emotion: EmotionType;
   trustDamage: boolean | null;
   identifiedStance: Stance | null;
